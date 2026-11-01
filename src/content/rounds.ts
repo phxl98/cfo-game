@@ -4,7 +4,7 @@
 // Only round 4 has breaking news.
 
 import { eur, eurm, num, pct } from '../lib/format'
-import type { Round, RouteState } from './types'
+import type { Round, RouteState, Task } from './types'
 
 export const centralQuestion = 'Does a project that beats the WACC really create value?'
 
@@ -62,15 +62,29 @@ const divisionWacc = (b: number) => wD * kd + wP * kp + wE * (rf + b * mrp)
 const groupWaccCapm = divisionWacc(beta)
 const projectYears = 10
 const projects = {
-  route: { name: 'New long haul route', division: 'Passenger Airlines', beta: 1.4, investment: 110, irr: 9 },
-  freight: { name: 'Two new freighters', division: 'Cargo', beta: 2.0, investment: 300, irr: 8 },
-  hangar: { name: 'New engine hangar', division: 'Lufthansa Technik', beta: 0.8, investment: 150, irr: 6 },
+  route: { name: 'New long haul route', short: 'route', beta: 1.4, investment: 110, irr: 9 },
+  freight: { name: 'Two new freighters', short: 'freighters', beta: 2.0, investment: 300, irr: 8 },
+  hangar: { name: 'New engine hangar', short: 'engine hangar', beta: 0.8, investment: 150, irr: 6 },
 }
 /** NPV at the right hurdle rate of a project that earns its IRR as a 10-year annuity. */
 const projectNpv = (p: { beta: number; investment: number; irr: number }) =>
   p.investment * (annuityFactor(divisionWacc(p.beta), projectYears) / annuityFactor(p.irr, projectYears) - 1)
 const freightNpv = projectNpv(projects.freight)
 const hangarNpv = projectNpv(projects.hangar)
+const routeNpv = projectNpv(projects.route)
+
+const hurdleTask = (id: keyof typeof projects): Task => {
+  const p = projects[id]
+  return {
+    id: `r2.${id}`,
+    type: 'numeric',
+    unit: '%',
+    formula: 'w_d r_d(1 − T) + w_p r_p + w_e (r_f + β × market risk premium)',
+    prompt: `Hurdle rate for the ${p.short} (β ${num(p.beta, 1)})`,
+    answer: divisionWacc(p.beta),
+    explanation: `Cost of equity ${num(rf, 1)} + ${num(p.beta, 1)} × ${num(mrp, 1)} = ${pct(rf + p.beta * mrp)}, hurdle rate = ${pct(divisionWacc(p.beta))}.`,
+  }
+}
 
 // ---------- Round 3: incremental cash flows ----------
 const rate3 = 8
@@ -156,8 +170,8 @@ export const rounds: Round[] = [
       },
     ],
     table: {
-      columns: ['Project on your desk', 'Division', 'IRR'],
-      rows: Object.values(projects).map((p) => [p.name, p.division, pct(p.irr)]),
+      columns: ['Project on your desk', 'IRR'],
+      rows: Object.values(projects).map((p) => [p.name, pct(p.irr)]),
     },
     tasks: [
       {
@@ -231,48 +245,33 @@ export const rounds: Round[] = [
     question: 'Give each project the hurdle rate of its own risk, then decide.',
     core: true,
     intro:
-      'Debt, hybrid and weights stay the same for every project. Only the cost of equity changes with the pure play beta (CAPM only, there is no DCF estimate per division).',
+      'Debt, hybrid and weights stay the same for every project. Only the cost of equity changes with the pure play beta (CAPM only, there is no DCF estimate per project).',
     data: [
       { key: 'kd', label: 'After tax cost of debt', value: pct(kd) },
       { key: 'kp', label: 'Cost of hybrid capital', value: pct(kp) },
       { key: 'weights', label: 'Target weights debt / hybrid / equity', value: `${wD * 100}% / ${wP * 100}% / ${wE * 100}%` },
       { key: 'rf', label: 'Risk free rate', value: pct(rf, 1) },
       { key: 'mrp', label: 'Market risk premium', value: pct(mrp, 1) },
-      { key: 'route', label: 'Hurdle rate of the route (β 1.4, same as the group)', value: pct(groupWaccCapm) },
     ],
     table: {
-      columns: ['Project', 'Division', 'Pure play beta', 'Investment', `IRR (${projectYears} years)`],
-      rows: Object.values(projects).map((p) => [p.name, p.division, num(p.beta, 1), eurm(p.investment, 0), pct(p.irr)]),
+      columns: ['Project', 'Pure play beta', 'Investment', `IRR (${projectYears} years)`],
+      rows: Object.values(projects).map((p) => [p.name, num(p.beta, 1), eurm(p.investment, 0), pct(p.irr)]),
     },
     tasks: [
-      {
-        id: 'r2.freight',
-        type: 'numeric',
-        unit: '%',
-        formula: 'w_d r_d(1 − T) + w_p r_p + w_e (r_f + β × market risk premium)',
-        prompt: `Hurdle rate for the freighters (β ${num(projects.freight.beta, 1)})`,
-        answer: divisionWacc(projects.freight.beta),
-        explanation: `Cost of equity ${num(rf, 1)} + ${num(projects.freight.beta, 1)} × ${num(mrp, 1)} = ${pct(rf + projects.freight.beta * mrp)}, hurdle rate = ${pct(divisionWacc(projects.freight.beta))}.`,
-      },
-      {
-        id: 'r2.hangar',
-        type: 'numeric',
-        unit: '%',
-        formula: 'w_d r_d(1 − T) + w_p r_p + w_e (r_f + β × market risk premium)',
-        prompt: `Hurdle rate for the engine hangar (β ${num(projects.hangar.beta, 1)})`,
-        answer: divisionWacc(projects.hangar.beta),
-        explanation: `Cost of equity ${num(rf, 1)} + ${num(projects.hangar.beta, 1)} × ${num(mrp, 1)} = ${pct(rf + projects.hangar.beta * mrp)}, hurdle rate = ${pct(divisionWacc(projects.hangar.beta))}.`,
-      },
+      hurdleTask('route'),
+      hurdleTask('freight'),
+      hurdleTask('hangar'),
       {
         id: 'r2.decide',
         type: 'multivote',
         decision: true,
-        prompt: 'Which projects do you approve? The route goes to a detailed review in round 3. 5 pts per project called right.',
+        prompt: 'Which projects do you approve? 5 pts per project called right.',
         options: [
+          { id: 'route', label: `${projects.route.name} (IRR ${pct(projects.route.irr)})`, points: 0, value: routeNpv },
           { id: 'freight', label: `${projects.freight.name} (IRR ${pct(projects.freight.irr)})`, points: 0, value: freightNpv },
           { id: 'hangar', label: `${projects.hangar.name} (IRR ${pct(projects.hangar.irr)})`, points: 0, value: hangarNpv },
         ],
-        explanation: `Freighters: IRR ${pct(projects.freight.irr)} < ${pct(divisionWacc(projects.freight.beta))}, NPV ${eurm(freightNpv)}. Hangar: IRR ${pct(projects.hangar.irr)} > ${pct(divisionWacc(projects.hangar.beta))}, NPV ${v(hangarNpv)}. The group WACC (${pct(groupWaccCapm)}) says the opposite for both.`,
+        explanation: `Route: IRR ${pct(projects.route.irr)} > ${pct(divisionWacc(projects.route.beta))}, NPV ${v(routeNpv)}. Freighters: IRR ${pct(projects.freight.irr)} < ${pct(divisionWacc(projects.freight.beta))}, NPV ${eurm(freightNpv)}. Hangar: IRR ${pct(projects.hangar.irr)} > ${pct(divisionWacc(projects.hangar.beta))}, NPV ${v(hangarNpv)}. The group WACC (${pct(groupWaccCapm)}) gets the freighters and the hangar wrong.`,
       },
     ],
     reveal:
@@ -290,9 +289,9 @@ export const rounds: Round[] = [
     chapter: 'Ch. 13.1–13.2',
     question: 'What is the NPV of the new long haul route?',
     core: true,
-    intro: `3-year project, step by step: pick the cash flows, then discount them at ${pct(rate3, 0)}.`,
+    intro: `The board wants a closer look at the long haul route before the aircraft are ordered. 3-year plan, step by step: pick the cash flows, then discount them at ${pct(rate3, 0)}.`,
     data: [
-      { key: 'hurdle', label: 'Hurdle rate: route WACC (6.94%) + 1 pp premium for a new route', value: pct(rate3, 0) },
+      { key: 'hurdle', label: `Hurdle rate: route WACC (${pct(groupWaccCapm)}) + 1 pp premium for a new route`, value: pct(rate3, 0) },
       { key: 'capex', label: 'Aircraft and setup, t = 0', value: eurm(capex, 0) },
       { key: 'nwc', label: 'Net operating working capital, t = 0, recovered in year 3', value: eurm(nwc, 0) },
       { key: 'ocf', label: 'Operating cash flow after tax, years 1 to 3', value: `${eurm(ocf, 0)} per year` },

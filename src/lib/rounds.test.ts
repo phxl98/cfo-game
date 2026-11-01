@@ -6,7 +6,7 @@ import { decisionValue, maxPoints, scoreTask, taskById } from './scoring'
 // The answer key from the build spec, rounded as published.
 const expected: Record<string, number> = {
   'r1.kd': 3.08, 'r1.capm': 10.2, 'r1.wacc': 7.14,
-  'r2.freight': 8.59, 'r2.hangar': 5.29,
+  'r2.route': 6.94, 'r2.freight': 8.59, 'r2.hangar': 5.29,
   'r3.cf': 38, 'r3.pv': 97.93, 'r3.end': 23.81, 'r3.npv': 11.74,
   'r4.enpv': 8.35, 'r4.cv': 3.83, 'r4.down': 12.95, 'r4.e.enpv': -1.32,
   'r5.green': 625, 'r5.conv': 562.5, 'r5.crisis': 529.41,
@@ -42,8 +42,8 @@ describe('answer key', () => {
 describe('structure', () => {
   const all = rounds.flatMap((r) => [...r.tasks, ...(r.event?.tasks ?? [])])
 
-  it('a perfect CFO earns €230k', () => {
-    expect(all.reduce((sum, t) => sum + maxPoints(t), 0)).toBe(230)
+  it('a perfect CFO earns €245k', () => {
+    expect(all.reduce((sum, t) => sum + maxPoints(t), 0)).toBe(245)
   })
 
   it('every numeric task shows its formula', () => {
@@ -79,6 +79,7 @@ describe('structure', () => {
 describe('decisions', () => {
   it('pay 5 per project called right', () => {
     const t = taskById('r2.decide')!
+    expect(scoreTask(t, JSON.stringify(['route', 'hangar']))).toBe(15)
     expect(scoreTask(t, JSON.stringify(['hangar']))).toBe(10)
     expect(scoreTask(t, JSON.stringify([]))).toBe(5)
     expect(scoreTask(t, JSON.stringify(['freight']))).toBe(0)
