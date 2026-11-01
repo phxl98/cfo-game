@@ -7,8 +7,8 @@ import { decisionValue, maxPoints, scoreTask, taskById } from './scoring'
 const expected: Record<string, number> = {
   'r1.kd': 3.08, 'r1.capm': 10.2, 'r1.wacc': 7.14,
   'r2.route': 6.94, 'r2.freight': 8.59, 'r2.hangar': 5.29,
-  'r3.cf': 38, 'r3.pv': 97.93, 'r3.end': 23.81, 'r3.npv': 11.74,
-  'r4.enpv': 8.35, 'r4.cv': 3.83, 'r4.down': 12.95, 'r4.e.enpv': -1.32,
+  'r3.cf': 38, 'r3.pv': 97.93, 'r3.end': 23.81, 'r3.npv': 11.74, 'r3.breakeven': 4.56,
+  'r4.enpv': 8.35, 'r4.cv': 3.83, 'r4.down': 8.32, 'r4.anchor': 26, 'r4.e.enpv': -3.2,
   'r5.green': 625, 'r5.conv': 562.5, 'r5.crisis': 529.41,
 }
 
@@ -28,9 +28,9 @@ describe('answer key', () => {
     expect(numeric.map((t) => t.id).sort()).toEqual(Object.keys(expected).sort())
   })
 
-  it('at most 5 rounds, at most 4 calculations each', () => {
+  it('at most 5 rounds, at most 5 calculations each', () => {
     expect(rounds.length).toBeLessThanOrEqual(5)
-    for (const r of rounds) expect(r.tasks.filter((t) => t.type === 'numeric').length).toBeLessThanOrEqual(4)
+    for (const r of rounds) expect(r.tasks.filter((t) => t.type === 'numeric').length).toBeLessThanOrEqual(5)
   })
 
   it('task ids are unique', () => {
@@ -42,8 +42,8 @@ describe('answer key', () => {
 describe('structure', () => {
   const all = rounds.flatMap((r) => [...r.tasks, ...(r.event?.tasks ?? [])])
 
-  it('a perfect CFO earns €245k', () => {
-    expect(all.reduce((sum, t) => sum + maxPoints(t), 0)).toBe(245)
+  it('a perfect CFO earns €265k', () => {
+    expect(all.reduce((sum, t) => sum + maxPoints(t), 0)).toBe(265)
   })
 
   it('every numeric task shows its formula', () => {
@@ -94,9 +94,9 @@ describe('decisions', () => {
 
   it('the fuel hedge beats going ahead or cancelling', () => {
     const t = taskById('r4.e.react')!
-    expect(decisionValue(t, 'A')).toBeCloseTo(-1.32, 2)
+    expect(decisionValue(t, 'A')).toBeCloseTo(-3.2, 2)
     expect(decisionValue(t, 'B')).toBe(0)
-    expect(decisionValue(t, 'C')).toBeCloseTo(2.68, 2)
+    expect(decisionValue(t, 'C')).toBeCloseTo(0.8, 2)
     expect([scoreTask(t, 'C'), scoreTask(t, 'B'), scoreTask(t, 'A')]).toEqual([10, 5, 0])
   })
 })

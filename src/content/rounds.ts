@@ -29,9 +29,9 @@ const expected = (s: { p: number; v: number }[]) => s.reduce((a, x) => a + x.p *
 const rf = 2.5
 const mrp = 5.5
 const beta = 1.4
-const p0 = 8
+const p0 = 6.4
 const sharesBn = 1.25
-const d1 = 0.32
+const d1 = 0.256
 const payout = 0.3
 const roe = 10
 const coupon = 2.0
@@ -56,6 +56,8 @@ const ke = (capm + dcf) / 2
 const wacc = wD * kd + wP * kp + wE * ke
 const waccBook = (mvDebt * kd + mvHybrid * kp + bvEquity * ke) / (mvDebt + mvHybrid + bvEquity)
 const mvEquity = sharesBn * p0
+const mvTotal = mvDebt + mvHybrid + mvEquity
+const waccMarket = (mvDebt * kd + mvHybrid * kp + mvEquity * ke) / mvTotal
 
 // ---------- Round 2: one hurdle rate per project ----------
 const divisionWacc = (b: number) => wD * kd + wP * kp + wE * (rf + b * mrp)
@@ -104,6 +106,7 @@ const pvCf = cf * af8
 const pvEnd = terminal * df8
 const npv = -(capex + nwc) + pvCf + pvEnd
 const npvWrong = -(capex + nwc + study) + (ocf - interest) * af8 + terminal * df8
+const breakEven = npv / af8
 
 // ---------- Round 4: risk ----------
 const baseNpv = Math.round(npv * 10) / 10
@@ -118,9 +121,22 @@ const sdGiven = Math.round(sdNpv * 10) / 10
 const cv = sdGiven / eNpv
 const downsideBeta = 1.9
 const keDownside = rf + downsideBeta * mrp
+const waccDownside = wD * kd + wP * kp + wE * keDownside
+// Undiversified owner (slide formula U = E − ½·A·σ²): the return they need to stay as well off with the route.
+const anchorReturn = 8
+const anchorSd = 20
+const riskAversion = 3
+const routeSd = 40
+const anchorUtility = anchorReturn - 0.5 * riskAversion * (anchorSd / 100) ** 2 * 100
+const anchorK = anchorUtility + 0.5 * riskAversion * (routeSd / 100) ** 2 * 100
+// After the risk class decision the route has to clear 10%: the base case is revalued at that rate.
+const rateHigh = 10
+const af10 = r4(annuityFactor(rateHigh, 3))
+const df10 = r4(discountFactor(rateHigh, 3))
+const baseNpv10 = Math.round((-(capex + nwc) + cf * af10 + terminal * df10) * 10) / 10
 const fuelShock = [
   { name: 'Worst', p: 0.4, v: -40 },
-  { name: 'Base', p: 0.4, v: baseNpv },
+  { name: 'Base', p: 0.4, v: baseNpv10 },
   { name: 'Best', p: 0.2, v: 50 },
 ]
 const eNpvFuel = expected(fuelShock)
@@ -218,7 +234,7 @@ export const rounds: Round[] = [
           { id: 'C', label: 'Target capital structure', points: 10 },
           { id: 'D', label: 'Include accounts payable as debt', points: 0 },
         ],
-        explanation: `Target weights reflect how future projects are financed, so they come first. Market values are a good second best when there is no target. Book values give a misleading ${pct(waccBook)}. Payables are not investor-supplied capital.`,
+        explanation: `Target weights reflect how future projects are financed, so they come first (WACC ${pct(wacc)}). Today’s market values (debt ${pct((mvDebt / mvTotal) * 100, 0)}, hybrid ${pct((mvHybrid / mvTotal) * 100, 0)}, equity ${pct((mvEquity / mvTotal) * 100, 0)}) are a good second best when there is no target (WACC ${pct(waccMarket)}). Book values give a misleading ${pct(waccBook)}. Payables are not investor-supplied capital.`,
       },
       {
         id: 'r1.mrp',
@@ -291,7 +307,7 @@ export const rounds: Round[] = [
     core: true,
     intro: `The board wants a closer look at the long haul route before the aircraft are ordered. 3-year plan, step by step: pick the cash flows, then discount them at ${pct(rate3, 0)}.`,
     data: [
-      { key: 'hurdle', label: `Hurdle rate: route WACC (${pct(groupWaccCapm)}) + 1 pp premium for a new route`, value: pct(rate3, 0) },
+      { key: 'hurdle', label: `Hurdle rate: route WACC (${pct(groupWaccCapm)}) + 1 pp premium for a new route, rounded`, value: `≈ ${pct(rate3, 0)}` },
       { key: 'capex', label: 'Aircraft and setup, t = 0', value: eurm(capex, 0) },
       { key: 'nwc', label: 'Net operating working capital, t = 0, recovered in year 3', value: eurm(nwc, 0) },
       { key: 'ocf', label: 'Operating cash flow after tax, years 1 to 3', value: `${eurm(ocf, 0)} per year` },
@@ -353,13 +369,22 @@ export const rounds: Round[] = [
         answer: npv,
         explanation: `−${capex + nwc} + ${num(pvCf)} + ${num(pvEnd)} = ${eurm(npv)}. Common mistake (study and interest in, hangar and lost passengers out): ${eurm(npvWrong)}.`,
       },
+      {
+        id: 'r3.breakeven',
+        type: 'numeric',
+        unit: '€ m',
+        formula: '{NPV}/{AF}',
+        prompt: 'Sensitivity: by how much may the annual cash flow fall before the NPV hits zero?',
+        answer: breakEven,
+        explanation: `${num(npv)} / ${num(af8, 4)} = ${eurm(breakEven)} per year, only about ${pct((breakEven / ocf) * 100, 0)} of the operating cash flow.`,
+      },
     ],
     reveal: `The route is worth ${eurm(npv)}: opportunity costs and cannibalization in, sunk costs and interest out.`,
     discuss: 'The market study cost real money. Why does it still not count?',
     route: { hurdle: pct(rate3, 0), npv: eurm(npv), status: 'approved' },
     backup: [
       'Should the route be charged for passengers it takes from Lufthansa’s own routes? What if a competitor would take them anyway?',
-      'A 3-year project with an NPV of about 10% of the investment: how much could go wrong before it turns negative?',
+      'The NPV survives a cash flow drop of only about 10%. Which input would you stress-test first, and why?',
     ],
   },
   {
@@ -375,7 +400,14 @@ export const rounds: Round[] = [
       { key: 'capm', label: 'Cost of equity with regular beta 1.4 (CAPM)', value: pct(capm) },
       { key: 'dbeta', label: 'Downside beta (Lufthansa falls harder than the market in downturns)', value: num(downsideBeta, 1) },
       { key: 'rfmrp', label: 'Risk free rate / market risk premium', value: `${pct(rf, 1)} / ${pct(mrp, 1)}` },
-      { key: 'anchor', label: 'Anchor investor', value: '15% stake, most of their wealth' },
+      { key: 'costs', label: 'After tax cost of debt / cost of hybrid', value: `${pct(kd)} / ${pct(kp)}` },
+      { key: 'weights', label: 'Target weights debt / hybrid / equity', value: `${wD * 100}% / ${wP * 100}% / ${wE * 100}%` },
+      {
+        key: 'anchor',
+        label: `Anchor investor (15% stake, most of their wealth): portfolio return E / volatility σ / risk aversion A`,
+        value: `${pct(anchorReturn, 0)} / ${pct(anchorSd, 0)} / ${riskAversion}`,
+      },
+      { key: 'routesd', label: 'Volatility σ of the route’s returns', value: pct(routeSd, 0) },
       { key: 'fund', label: 'Pension fund', value: '2% stake, diversified portfolio' },
     ],
     table: {
@@ -403,15 +435,6 @@ export const rounds: Round[] = [
         explanation: `${num(sdGiven, 1)} / ${num(eNpv)} = ${num(cv)}: more than twice the average project.`,
       },
       {
-        id: 'r4.down',
-        type: 'numeric',
-        unit: '%',
-        formula: 'r_f + β_{down} × market risk premium',
-        prompt: 'Cost of equity with downside beta',
-        answer: keDownside,
-        explanation: `${num(rf, 1)} + ${num(downsideBeta, 1)} × ${num(mrp, 1)} = ${pct(keDownside)} (Estrada).`,
-      },
-      {
         id: 'r4.hurdle',
         type: 'choice',
         prompt: 'The average project has a CV of 1.50. Which hurdle rate for the route?',
@@ -422,12 +445,35 @@ export const rounds: Round[] = [
         ],
         explanation: 'Riskier than average projects get a higher hurdle rate.',
       },
+      {
+        id: 'r4.down',
+        type: 'numeric',
+        unit: '%',
+        formula: 'w_d r_d(1 − T) + w_p r_p + w_e (r_f + β_{down} × market risk premium)',
+        prompt: 'WACC of the route with downside beta',
+        answer: waccDownside,
+        explanation: `Cost of equity ${num(rf, 1)} + ${num(downsideBeta, 1)} × ${num(mrp, 1)} = ${pct(keDownside)}; WACC = ${num(wD, 1)} × ${pct(kd)} + ${num(wP, 1)} × ${pct(kp)} + ${num(wE, 1)} × ${pct(keDownside)} = ${pct(waccDownside)}. That is above the ${pct(rate3, 0)} from round 3: the regular beta understated how hard the route is hit in a crisis (Estrada).`,
+      },
+      {
+        id: 'r4.anchor',
+        type: 'numeric',
+        unit: '%',
+        formula: 'E − {1}/{2}Aσ²_{portfolio} + {1}/{2}Aσ²_{route}',
+        prompt: 'Cost of capital the undiversified anchor investor demands for the route',
+        answer: anchorK,
+        explanation: `U = ${pct(anchorReturn, 0)} − ½ × ${riskAversion} × ${num(anchorSd / 100, 2)}² = ${pct(anchorUtility, 0)}; k = ${pct(anchorUtility, 0)} + ½ × ${riskAversion} × ${num(routeSd / 100, 2)}² = ${pct(anchorK, 0)}. The diversified pension fund only asks for the route’s hurdle rate of about ${pct(rate3, 0)}–${pct(rateHigh, 0)}.`,
+      },
     ],
     event: {
       title: 'Fuel price shock',
-      text: 'Oil jumps overnight. The scenario probabilities shift towards the worst case. A bank offers a fuel hedge.',
+      text: `Oil jumps overnight. The scenario probabilities shift towards the worst case, and the route is now valued at its ${pct(rateHigh, 0)} hurdle. A bank offers a fuel hedge.`,
       data: [
         { key: 'probs', label: 'New probabilities worst / base / best', value: '40% / 40% / 20%' },
+        {
+          key: 'npv10',
+          label: `Scenario NPVs at the ${pct(rateHigh, 0)} hurdle: worst / base / best`,
+          value: `${eurm(-40, 1)} / ${eurm(baseNpv10, 1)} / ${eurm(50, 1)}`,
+        },
         {
           key: 'hedge',
           label: `Fuel hedge: costs ${eurm(hedgeCost, 0)}, limits the worst case to ${eurm(hedgedWorst, 0)}`,
@@ -442,7 +488,7 @@ export const rounds: Round[] = [
           formula: 'Σ p × NPV',
           prompt: 'New expected NPV, without the hedge',
           answer: eNpvFuel,
-          explanation: `0.4 × (−40) + 0.4 × ${num(baseNpv, 1)} + 0.2 × 50 = ${eurm(eNpvFuel)}.`,
+          explanation: `At ${pct(rateHigh, 0)} the base case is worth only ${eurm(baseNpv10, 1)}. 0.4 × (−40) + 0.4 × ${num(baseNpv10, 1)} + 0.2 × 50 = ${eurm(eNpvFuel)}.`,
         },
         {
           id: 'r4.e.react',
@@ -455,14 +501,13 @@ export const rounds: Round[] = [
             { id: 'C', label: `Go ahead with the fuel hedge (${eurm(hedgeCost, 0)})`, points: 10, value: eNpvHedged },
             { id: 'D', label: 'Go ahead, but finance it with more debt to lower the WACC', points: 0, value: eNpvFuel },
           ],
-          explanation: `Best: the hedge (10 pts). Cancelling avoids the loss (5 pts). Without the hedge E(NPV) is ${eurm(eNpvFuel)}. With it: 0.4 × (${hedgedWorst} − ${hedgeCost}) + 0.4 × (${num(baseNpv, 1)} − ${hedgeCost}) + 0.2 × (50 − ${hedgeCost}) = ${v(eNpvHedged)}. More debt does not change the fuel risk, it only moves it to the shareholders.`,
+          explanation: `Best: the hedge (10 pts). Cancelling avoids the loss (5 pts). Without the hedge E(NPV) is ${eurm(eNpvFuel)}. With it: 0.4 × (${hedgedWorst} − ${hedgeCost}) + 0.4 × (${num(baseNpv10, 1)} − ${hedgeCost}) + 0.2 × (50 − ${hedgeCost}) = ${v(eNpvHedged)}. More debt does not change the fuel risk, it only moves it to the shareholders.`,
         },
       ],
       explanation: 'The base case did not change, yet the decision did. Managing the risk can be worth more than accepting or rejecting.',
     },
-    reveal: `The route’s CV of ${num(cv)} puts it in the high risk class, and its downside beta adds ${pct(keDownside - capm)} to the cost of equity. Theory says only market risk counts, but not all owners are diversified (IFM 13.8).`,
-    discuss:
-      'The anchor investor (15%, most of their wealth) and the pension fund (2%, diversified): which risk matters to each of them, and whose view should the CFO follow?',
+    reveal: `The route’s CV of ${num(cv)} puts it in the high risk class: at ${pct(rateHigh, 0)} its base NPV shrinks from ${eurm(npv)} to ${eurm(baseNpv10, 1)}. With the downside beta its WACC is ${pct(waccDownside)}, not ${pct(groupWaccCapm)}. The undiversified anchor investor would even demand ${pct(anchorK, 0)}, the diversified pension fund only the market’s rate (IFM 13.8).`,
+    discuss: `The anchor investor demands ${pct(anchorK, 0)}, the pension fund about ${pct(rate3, 0)}. Whose view should the CFO follow?`,
     route: { hurdle: '10% (high risk class)', npv: `E(NPV) ${eurm(eNpv)}`, status: 'under review' },
     routeAfterEvent: { hurdle: '10% (high risk class)', npv: `E(NPV) ${eurm(eNpvFuel)}`, status: 'under review' },
     routeByChoice: {
@@ -533,8 +578,10 @@ export const rounds: Round[] = [
       },
     ],
     reveal: `Green ${eurm(greenValue)} vs conventional ${eurm(convValue)}: the gap comes from expected cash flows first, the discount rate second.`,
-    discuss: 'Back to the central question: which of today’s rounds would have fooled a CFO who only looks at the WACC?',
+    discuss:
+      'In round 4 we raised the route’s rate for its high total risk (CV, book 13.8). Edmans says only systematic risk belongs in the rate. Who is right, and from whose point of view?',
     backup: [
+      'Back to the central question: which of today’s rounds would have fooled a CFO who only looks at the WACC?',
       'Should Lufthansa use a lower discount rate for green projects in general? (Edmans: only if their cash flows are less exposed to systematic risk; the label is not a reason.)',
       'If investors accept lower returns on green assets, who gains and who loses?',
     ],
