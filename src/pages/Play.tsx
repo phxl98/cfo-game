@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { BoardingPass, Field, PassHeader, Perforation } from '../components/BoardingPass'
 import { DataCard, eventChanges } from '../components/DataCard'
 import { BreakingNewsFlash } from '../components/BreakingNewsFlash'
@@ -16,6 +16,7 @@ import { teamSession } from '../lib/storage'
 
 export function Play() {
   const session = teamSession.get()
+  const navigate = useNavigate()
   const { snap, error, refresh } = useGame(session?.gameId ?? null)
   useRootFontSize(TEAM_FONT_SIZE)
 
@@ -66,7 +67,16 @@ export function Play() {
 
   return (
     <BoardingPass>
-      <PassHeader round={round && !finished ? round.n : undefined} total={rounds.length} timerEnd={game?.timer_end ?? null} />
+      <PassHeader
+        round={round && !finished ? round.n : undefined}
+        total={rounds.length}
+        timerEnd={game?.timer_end ?? null}
+        onLeave={() => {
+          if (!confirm('Leave this game? You can rejoin with the same code and team name.')) return
+          teamSession.set(null)
+          navigate(`/?code=${session.code}`)
+        }}
+      />
 
       {game && (game.current_round >= 2 || finished) && (
         <RouteBar

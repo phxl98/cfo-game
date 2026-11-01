@@ -8,7 +8,7 @@ const expected: Record<string, number> = {
   'r1.kd': 3.08, 'r1.capm': 10.2, 'r1.wacc': 7.14,
   'r2.route': 6.94, 'r2.freight': 8.59, 'r2.hangar': 5.29,
   'r3.cf': 38, 'r3.pv': 97.93, 'r3.end': 23.81, 'r3.npv': 11.74, 'r3.breakeven': 4.56,
-  'r4.enpv': 8.35, 'r4.cv': 3.83, 'r4.down': 8.32, 'r4.anchor': 26, 'r4.e.enpv': -3.2,
+  'r4.enpv': 8.35, 'r4.cv': 3.83, 'r4.down': 8.32, 'r4.e.enpv': -3.2,
   'r5.green': 625, 'r5.conv': 562.5, 'r5.crisis': 529.41,
 }
 
@@ -42,8 +42,8 @@ describe('answer key', () => {
 describe('structure', () => {
   const all = rounds.flatMap((r) => [...r.tasks, ...(r.event?.tasks ?? [])])
 
-  it('a perfect CFO earns €265k', () => {
-    expect(all.reduce((sum, t) => sum + maxPoints(t), 0)).toBe(265)
+  it('a perfect CFO earns €255k', () => {
+    expect(all.reduce((sum, t) => sum + maxPoints(t), 0)).toBe(255)
   })
 
   it('every numeric task shows its formula', () => {

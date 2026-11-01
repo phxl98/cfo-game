@@ -122,13 +122,6 @@ const cv = sdGiven / eNpv
 const downsideBeta = 1.9
 const keDownside = rf + downsideBeta * mrp
 const waccDownside = wD * kd + wP * kp + wE * keDownside
-// Undiversified owner (slide formula U = E − ½·A·σ²): the return they need to stay as well off with the route.
-const anchorReturn = 8
-const anchorSd = 20
-const riskAversion = 3
-const routeSd = 40
-const anchorUtility = anchorReturn - 0.5 * riskAversion * (anchorSd / 100) ** 2 * 100
-const anchorK = anchorUtility + 0.5 * riskAversion * (routeSd / 100) ** 2 * 100
 // After the risk class decision the route has to clear 10%: the base case is revalued at that rate.
 const rateHigh = 10
 const af10 = r4(annuityFactor(rateHigh, 3))
@@ -402,12 +395,7 @@ export const rounds: Round[] = [
       { key: 'rfmrp', label: 'Risk free rate / market risk premium', value: `${pct(rf, 1)} / ${pct(mrp, 1)}` },
       { key: 'costs', label: 'After tax cost of debt / cost of hybrid', value: `${pct(kd)} / ${pct(kp)}` },
       { key: 'weights', label: 'Target weights debt / hybrid / equity', value: `${wD * 100}% / ${wP * 100}% / ${wE * 100}%` },
-      {
-        key: 'anchor',
-        label: `Anchor investor (15% stake, most of their wealth): portfolio return E / volatility σ / risk aversion A`,
-        value: `${pct(anchorReturn, 0)} / ${pct(anchorSd, 0)} / ${riskAversion}`,
-      },
-      { key: 'routesd', label: 'Volatility σ of the route’s returns', value: pct(routeSd, 0) },
+      { key: 'anchor', label: 'Anchor investor', value: '15% stake, most of their wealth' },
       { key: 'fund', label: 'Pension fund', value: '2% stake, diversified portfolio' },
     ],
     table: {
@@ -454,15 +442,6 @@ export const rounds: Round[] = [
         answer: waccDownside,
         explanation: `Cost of equity ${num(rf, 1)} + ${num(downsideBeta, 1)} × ${num(mrp, 1)} = ${pct(keDownside)}; WACC = ${num(wD, 1)} × ${pct(kd)} + ${num(wP, 1)} × ${pct(kp)} + ${num(wE, 1)} × ${pct(keDownside)} = ${pct(waccDownside)}. That is above the ${pct(rate3, 0)} from round 3: the regular beta understated how hard the route is hit in a crisis (Estrada).`,
       },
-      {
-        id: 'r4.anchor',
-        type: 'numeric',
-        unit: '%',
-        formula: 'E − {1}/{2}Aσ²_{portfolio} + {1}/{2}Aσ²_{route}',
-        prompt: 'Cost of capital the undiversified anchor investor demands for the route',
-        answer: anchorK,
-        explanation: `U = ${pct(anchorReturn, 0)} − ½ × ${riskAversion} × ${num(anchorSd / 100, 2)}² = ${pct(anchorUtility, 0)}; k = ${pct(anchorUtility, 0)} + ½ × ${riskAversion} × ${num(routeSd / 100, 2)}² = ${pct(anchorK, 0)}. The diversified pension fund only asks for the route’s hurdle rate of about ${pct(rate3, 0)}–${pct(rateHigh, 0)}.`,
-      },
     ],
     event: {
       title: 'Oil shock: Strait of Hormuz',
@@ -506,8 +485,9 @@ export const rounds: Round[] = [
       ],
       explanation: 'The base case did not change, yet the decision did. Managing the risk can be worth more than accepting or rejecting.',
     },
-    reveal: `The route’s CV of ${num(cv)} puts it in the high risk class: at ${pct(rateHigh, 0)} its base NPV shrinks from ${eurm(npv)} to ${eurm(baseNpv10, 1)}. With the downside beta its WACC is ${pct(waccDownside)}, not ${pct(groupWaccCapm)}. The undiversified anchor investor would even demand ${pct(anchorK, 0)}, the diversified pension fund only the market’s rate (IFM 13.8).`,
-    discuss: `The anchor investor demands ${pct(anchorK, 0)}, the pension fund about ${pct(rate3, 0)}. Whose view should the CFO follow?`,
+    reveal: `The route’s CV of ${num(cv)} puts it in the high risk class: at ${pct(rateHigh, 0)} its base NPV shrinks from ${eurm(npv)} to ${eurm(baseNpv10, 1)}. With the downside beta its WACC is ${pct(waccDownside)}, not ${pct(groupWaccCapm)}. Theory says only market risk counts, but not all owners are diversified (IFM 13.8).`,
+    discuss:
+      'The anchor investor (15%, most of their wealth) and the pension fund (2%, diversified): which risk matters to each of them, and whose view should the CFO follow?',
     route: { hurdle: '10% (high risk class)', npv: `E(NPV) ${eurm(eNpv)}`, status: 'under review' },
     routeAfterEvent: { hurdle: '10% (high risk class)', npv: `E(NPV) ${eurm(eNpvFuel)}`, status: 'under review' },
     routeByChoice: {

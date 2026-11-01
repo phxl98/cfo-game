@@ -11,7 +11,17 @@ export function BoardingPass({ children }: { children: ReactNode }) {
   )
 }
 
-export function PassHeader({ round, total, timerEnd }: { round?: number; total: number; timerEnd: string | null }) {
+export function PassHeader({
+  round,
+  total,
+  timerEnd,
+  onLeave,
+}: {
+  round?: number
+  total: number
+  timerEnd: string | null
+  onLeave?: () => void
+}) {
   return (
     <div className="sticky top-0 z-20 flex items-center justify-between gap-3 rounded-t-3xl border-b-4 border-gold bg-navy-light px-5 py-3.5">
       <Brand size="sm" subtitle="CFO Game" />
@@ -25,6 +35,15 @@ export function PassHeader({ round, total, timerEnd }: { round?: number; total: 
               {round}/{total}
             </span>
           </span>
+        )}
+        {onLeave && (
+          <button
+            type="button"
+            onClick={onLeave}
+            className="rounded-lg bg-white/10 px-2.5 py-1 text-xs font-semibold text-white/80 hover:bg-white/20"
+          >
+            Leave
+          </button>
         )}
       </div>
     </div>
