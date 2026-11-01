@@ -69,6 +69,12 @@ describe('leaderboard', () => {
     expect(a.points).toBeCloseTo(15.15, 2)
   })
 
+  it('breaking news answers count only after their own reveal', () => {
+    const react = { ...answer, id: 'c', round: 4, task_id: 'r4.e.react', value: 'C' }
+    expect(leaderboard([team('A')], [react], [4], 4)[0].points).toBe(0)
+    expect(leaderboard([team('A')], [react], [4])[0].points).toBeCloseTo(2.68, 2)
+  })
+
   it('bonus counts before any reveal, a missing bonus column counts as 0', () => {
     expect(leaderboard([team('A'), team('B', 10)], [answer], []).map((e) => e.points)).toEqual([10, 0])
   })

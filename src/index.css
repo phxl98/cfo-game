@@ -118,6 +118,41 @@
   overflow: hidden;
 }
 
+/* Breaking news takeover: snaps in, holds, fades out by itself. Seen once per game, so it may be loud. */
+@keyframes news-flash {
+  0% {
+    opacity: 0;
+  }
+  6%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+.news-flash {
+  animation: news-flash 3400ms ease-out both;
+}
+@keyframes news-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+.news-pop {
+  animation: news-pop 450ms var(--ease-out-strong) both;
+}
+@keyframes news-ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.news-ticker {
+  animation: news-ticker 9s linear infinite;
+}
+
 /* Final screen: the plane flies in once, slows down in the middle, then floats; the leaderboard follows. */
 @keyframes fly-in {
   from {
@@ -142,7 +177,9 @@
 @media (prefers-reduced-motion: reduce) {
   .fly-in,
   .float,
-  .after-plane {
+  .after-plane,
+  .news-pop,
+  .news-ticker {
     animation: none;
   }
   .drawer {

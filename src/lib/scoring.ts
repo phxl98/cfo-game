@@ -1,6 +1,6 @@
 import { rounds } from '../content/rounds'
 import type { Round, Task } from '../content/types'
-import type { AnswerRow, TeamRow } from './backend/types'
+import type { AnswerRow, GameRow, TeamRow } from './backend/types'
 import { parseNumber } from './format'
 
 const EPS = 1e-9
@@ -115,19 +115,26 @@ const taskIndex = new Map<string, Task>(
 
 export const taskById = (id: string) => taskIndex.get(id)
 
+const eventTaskIds = new Set(rounds.flatMap((r) => r.event?.tasks.map((t) => t.id) ?? []))
+
+/** While breaking news runs, its round is already revealed, but the news answers must not count yet. */
+export const pendingEventRound = (game: Pick<GameRow, 'round_state' | 'current_round'>) =>
+  game.round_state === 'event' ? game.current_round : undefined
+
 /** Points and decision values only count once the round has been revealed; the captain's bonus always counts. */
-export function teamScore(team: TeamRow, answers: AnswerRow[], revealedRounds: number[]): number {
+export function teamScore(team: TeamRow, answers: AnswerRow[], revealedRounds: number[], pendingEvent?: number): number {
   const teamId = team.id
   return (team.bonus ?? 0) + answers
     .filter((a) => a.team_id === teamId && revealedRounds.includes(a.round))
+    .filter((a) => !(a.round === pendingEvent && eventTaskIds.has(a.task_id)))
     .reduce((sum, a) => {
       const task = taskById(a.task_id)
       return sum + (task ? scoreTask(task, a.value) + decisionValue(task, a.value) : 0)
     }, 0)
 }
 
-export function leaderboard(teams: TeamRow[], answers: AnswerRow[], revealedRounds: number[]) {
+export function leaderboard(teams: TeamRow[], answers: AnswerRow[], revealedRounds: number[], pendingEvent?: number) {
   return teams
-    .map((t) => ({ team: t, points: teamScore(t, answers, revealedRounds) }))
+    .map((t) => ({ team: t, points: teamScore(t, answers, revealedRounds, pendingEvent) }))
     .sort((a, b) => b.points - a.points || a.team.name.localeCompare(b.team.name))
 }

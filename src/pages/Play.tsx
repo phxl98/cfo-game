@@ -2,6 +2,7 @@ import { Fragment, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { BoardingPass, Field, PassHeader, Perforation } from '../components/BoardingPass'
 import { DataCard, eventChanges } from '../components/DataCard'
+import { BreakingNewsFlash } from '../components/BreakingNewsFlash'
 import { RouteBar } from '../components/RouteBar'
 import { TaskRow } from '../components/TaskRow'
 import { centralQuestion, finalAnswer, roundByNumber, rounds, routeStatus, taskNumbers } from '../content/rounds'
@@ -10,7 +11,7 @@ import { useGame } from '../hooks/useGame'
 import { TEAM_FONT_SIZE, useRootFontSize } from '../hooks/useRootFontSize'
 import { backend } from '../lib/backend'
 import { eurm } from '../lib/format'
-import { leaderboard, teamScore } from '../lib/scoring'
+import { leaderboard, pendingEventRound, teamScore } from '../lib/scoring'
 import { teamSession } from '../lib/storage'
 
 export function Play() {
@@ -28,12 +29,14 @@ export function Play() {
   const answers = snap?.answers ?? []
   const mine = answers.filter((a) => a.team_id === session.teamId)
   const me = snap?.teams.find((t) => t.id === session.teamId)
-  const points = game && me ? teamScore(me, answers, game.revealed_rounds) : 0
+  const points = game && me ? teamScore(me, answers, game.revealed_rounds, pendingEventRound(game)) : 0
   const round = game ? roundByNumber(game.current_round) : undefined
   const state = game?.round_state
   const eventOn = !!game && !!round && game.event_rounds.includes(round.n)
   const revealed = state === 'revealed'
   const canSubmit = state === 'open' || state === 'event'
+  // During breaking news the round's own tasks stay revealed; only the news tasks are open.
+  const mainRevealed = revealed || (!!game && !!round && game.revealed_rounds.includes(round.n))
   const finished = state === 'finished'
   const playing = !!round && !!state && state !== 'locked' && !finished
   const valueOf = (taskId: string) => mine.find((a) => a.task_id === taskId)?.value
@@ -44,7 +47,7 @@ export function Play() {
   }
 
   const numbers = round ? taskNumbers(round) : new Map<string, string>()
-  const rows = (tasks: Task[], event: boolean, offset: number) =>
+  const rows = (tasks: Task[], event: boolean, offset: number, shown = revealed) =>
     tasks.map((t, i) => (
       <Fragment key={t.id}>
         <Perforation />
@@ -54,8 +57,8 @@ export function Play() {
           event={event}
           order={offset + i}
           value={valueOf(t.id)}
-          canSubmit={canSubmit}
-          revealed={revealed}
+          canSubmit={canSubmit && !shown}
+          revealed={shown}
           onSubmit={(v) => submit(round!.n, t.id, v)}
         />
       </Fragment>
@@ -67,7 +70,7 @@ export function Play() {
 
       {game && (game.current_round >= 2 || finished) && (
         <RouteBar
-          route={routeStatus(game.revealed_rounds, game.event_rounds, valueOf)}
+          route={routeStatus(game.revealed_rounds, game.event_rounds.filter((n) => n !== pendingEventRound(game)), valueOf)}
           className="border-b border-slate-100 bg-slate-50 px-6 py-2 text-sm"
         />
       )}
@@ -101,7 +104,8 @@ export function Play() {
             <FlightData key={round.n} round={round} eventOn={eventOn} />
           </div>
 
-          {rows(round.tasks, false, 0)}
+          {state === 'event' && round.event && <BreakingNewsFlash title={round.event.title} />}
+          {rows(round.tasks, false, 0, mainRevealed)}
 
           {eventOn && round.event && (
             <>

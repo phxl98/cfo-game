@@ -4,6 +4,7 @@ import { ChoiceChart } from '../components/ChoiceChart'
 import { DataCard } from '../components/DataCard'
 import { Formula } from '../components/Formula'
 import { Leaderboard } from '../components/Leaderboard'
+import { BreakingNewsFlash } from '../components/BreakingNewsFlash'
 import { RouteBar } from '../components/RouteBar'
 import { ChecklistTable } from '../components/TaskRow'
 import { Timer } from '../components/Timer'
@@ -14,7 +15,7 @@ import { useRootFontSize } from '../hooks/useRootFontSize'
 import { backend, type AnswerRow, type GameRow, type HostAction, type TeamRow } from '../lib/backend'
 import { LOCAL_PIN } from '../lib/backend/local'
 import { eurm, withUnit } from '../lib/format'
-import { leaderboard, maxPoints, scoreTask } from '../lib/scoring'
+import { leaderboard, maxPoints, pendingEventRound, scoreTask } from '../lib/scoring'
 import { hostGame, hostPin } from '../lib/storage'
 
 export function Host() {
@@ -191,7 +192,7 @@ function HostGame({ pin, gameId, onLeave }: { pin: string; gameId: string; onLea
       <Controls game={game} busy={busy} act={act} />
       {(game.current_round >= 2 || game.round_state === 'finished') && (
         <div className="border-b border-slate-200 bg-slate-50">
-          <RouteBar route={routeStatus(game.revealed_rounds, game.event_rounds)} className="mx-auto max-w-7xl px-6 py-2 text-lg" />
+          <RouteBar route={routeStatus(game.revealed_rounds, game.event_rounds.filter((n) => n !== pendingEventRound(game)))} className="mx-auto max-w-7xl px-6 py-2 text-lg" />
         </div>
       )}
       {(actionError || error) && (
@@ -201,7 +202,7 @@ function HostGame({ pin, gameId, onLeave }: { pin: string; gameId: string; onLea
       <main className="mx-auto max-w-7xl px-6 py-6">
         {game.show_leaderboard ? (
           <div className="mx-auto max-w-4xl rounded-3xl bg-white p-10 shadow-sm">
-            <Leaderboard entries={leaderboard(teams, answers, game.revealed_rounds)} onBonus={bonus} />
+            <Leaderboard entries={leaderboard(teams, answers, game.revealed_rounds, pendingEventRound(game))} onBonus={bonus} />
           </div>
         ) : game.round_state === 'finished' ? (
           <FinalScreen teams={teams} answers={answers} game={game} onBonus={bonus} />
@@ -220,6 +221,8 @@ function Controls({ game, busy, act }: { game: GameRow; busy: boolean; act: (a: 
   const s = game.round_state
   const btn = 'rounded-xl px-4 py-2 font-semibold transition disabled:opacity-30'
   const last = rounds[rounds.length - 1].n
+  // A round with breaking news plays it first: "Next round" then brings the news, not the next round.
+  const newsPending = !!round?.event && !game.event_rounds.includes(round.n) && s !== 'locked'
   return (
     <div className="no-print border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-6 py-3">
@@ -227,13 +230,6 @@ function Controls({ game, busy, act }: { game: GameRow; busy: boolean; act: (a: 
           <>
             <button disabled={busy || s !== 'locked'} onClick={() => act('unlock')} className={`${btn} bg-navy text-white`}>
               Unlock round
-            </button>
-            <button
-              disabled={busy || !round.event || s !== 'open'}
-              onClick={() => act('event')}
-              className={`${btn} bg-red-600 text-white ${round.event ? '' : 'hidden'}`}
-            >
-              Breaking news
             </button>
             <button
               disabled={busy || (s !== 'open' && s !== 'event')}
@@ -247,7 +243,7 @@ function Controls({ game, busy, act }: { game: GameRow; busy: boolean; act: (a: 
         {game.current_round < last ? (
           <button
             disabled={busy || s === 'finished'}
-            onClick={() => act('goto', game.current_round + 1)}
+            onClick={() => (newsPending ? act('event') : act('goto', game.current_round + 1))}
             className={`${btn} border border-navy text-navy`}
           >
             {round ? 'Next round →' : 'Start round 1 →'}
@@ -322,7 +318,7 @@ function Lobby({ teams, joinUrl, code }: { teams: TeamRow[]; joinUrl: string; co
 const stateLabel: Record<GameRow['round_state'], string> = {
   locked: 'Locked: presenters are briefing',
   open: 'Open: teams are calculating',
-  event: 'Breaking news: teams recalculate',
+  event: 'Breaking news: teams react',
   revealed: 'Revealed',
   finished: 'Finished',
 }
@@ -331,6 +327,8 @@ function RoundScreen({ game, teams, answers }: { game: GameRow; teams: TeamRow[]
   const round = roundByNumber(game.current_round)!
   const eventOn = game.event_rounds.includes(round.n)
   const revealed = game.round_state === 'revealed'
+  // During breaking news the round's own tasks stay revealed; only the news tasks are open.
+  const mainRevealed = revealed || game.revealed_rounds.includes(round.n)
   const numbers = taskNumbers(round)
 
   return (
@@ -346,6 +344,7 @@ function RoundScreen({ game, teams, answers }: { game: GameRow; teams: TeamRow[]
         <span className="rounded-full bg-slate-200 px-4 py-1.5 font-semibold text-slate-700">{stateLabel[game.round_state]}</span>
       </div>
 
+      {game.round_state === 'event' && round.event && <BreakingNewsFlash title={round.event.title} />}
       {eventOn && round.event && (
         <div className="banner-in rounded-2xl bg-red-600 p-6 text-white shadow-lg">
           <p className="text-sm font-bold uppercase tracking-widest text-white/70">Breaking news</p>
@@ -358,7 +357,7 @@ function RoundScreen({ game, teams, answers }: { game: GameRow; teams: TeamRow[]
         <DataCard round={round} eventOn={eventOn} />
         <div className="divide-y divide-slate-200 self-start rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
           {round.tasks.map((t) => (
-            <HostTask key={t.id} task={t} label={numbers.get(t.id)!} teams={teams} answers={answers} revealed={revealed} />
+            <HostTask key={t.id} task={t} label={numbers.get(t.id)!} teams={teams} answers={answers} revealed={mainRevealed} />
           ))}
           {eventOn &&
             round.event?.tasks.map((t) => (
