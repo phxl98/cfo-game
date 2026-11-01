@@ -1,0 +1,184 @@
+@import "tailwindcss";
+
+@theme {
+  /* Lufthansa brand palette (2018 identity): deep blue, yellow, white. */
+  --color-navy: #05164d;
+  --color-navy-light: #2a3d7c;
+  --color-gold: #ffad00;
+  --color-paper: #f5f6f9;
+
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+@layer base {
+  html,
+  body {
+    background: var(--color-paper);
+    color: #0f172a;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Every pressable element confirms the press. */
+  button {
+    touch-action: manipulation;
+    transition:
+      transform 160ms var(--ease-out-strong),
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease,
+      opacity 150ms ease;
+  }
+  button:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  button.press-wide:active:not(:disabled) {
+    transform: scale(0.985);
+  }
+}
+
+/* Formulas: serif like a textbook, real subscripts and stacked fractions. */
+.formula {
+  font-family: 'Cambria Math', 'STIX Two Math', Cambria, 'Times New Roman', serif;
+  font-size: 1.08em;
+}
+.formula sub {
+  font-size: 0.68em;
+  line-height: 0;
+}
+.frac {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+  margin: 0 0.15em;
+  font-size: 0.9em;
+  line-height: 1.15;
+}
+.frac > span + span {
+  border-top: 1px solid currentColor;
+  padding-top: 0.05em;
+}
+
+/* Breaking-news banner: rare and important, so it gets a real entrance. */
+@keyframes banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+  }
+}
+.banner-in {
+  animation: banner-in 420ms var(--ease-out-strong) both;
+}
+
+/* Changed inputs flash yellow once, then settle into the event colour. */
+@keyframes row-flash {
+  0%,
+  35% {
+    background-color: color-mix(in srgb, var(--color-gold) 45%, white);
+  }
+}
+.row-flash {
+  animation: row-flash 1400ms ease-out;
+}
+
+/* Results arrive in a short cascade after the reveal. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.rise-in {
+  animation: rise-in 280ms var(--ease-out-strong) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+
+/* Bars grow with transform, not width: no layout work per frame. */
+.bar {
+  transform-origin: left;
+  transition: transform 600ms var(--ease-out-strong);
+}
+
+/* Flight data drawer: grid rows animate the height without measuring it. */
+.drawer {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 220ms var(--ease-out-strong),
+    opacity 160ms ease;
+}
+.drawer[data-open='true'] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.drawer > * {
+  overflow: hidden;
+}
+
+/* Final screen: the plane flies in once, slows down in the middle, then floats; the leaderboard follows. */
+@keyframes fly-in {
+  from {
+    transform: translateX(-110vw);
+  }
+}
+.fly-in {
+  animation: fly-in 1800ms var(--ease-out-strong) both;
+}
+@keyframes float {
+  50% {
+    transform: translateY(-5px);
+  }
+}
+.float {
+  animation: float 3.2s ease-in-out 1800ms infinite;
+}
+.after-plane {
+  animation: rise-in 400ms var(--ease-out-strong) 1500ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fly-in,
+  .float,
+  .after-plane {
+    animation: none;
+  }
+  .drawer {
+    transition: opacity 160ms ease;
+  }
+  .banner-in,
+  .rise-in {
+    animation-name: fade-only;
+    animation-duration: 200ms;
+  }
+  .row-flash {
+    animation: none;
+  }
+  .bar {
+    transition-duration: 0ms;
+  }
+  button:active:not(:disabled) {
+    transform: none;
+  }
+}
+@keyframes fade-only {
+  from {
+    opacity: 0;
+  }
+}
+
+@media print {
+  html,
+  body {
+    background: white;
+  }
+  .no-print {
+    display: none !important;
+  }
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+}
