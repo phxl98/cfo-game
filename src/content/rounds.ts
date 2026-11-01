@@ -465,8 +465,8 @@ export const rounds: Round[] = [
       },
     ],
     event: {
-      title: 'Fuel price shock',
-      text: `Oil jumps overnight. The scenario probabilities shift towards the worst case, and the route is now valued at its ${pct(rateHigh, 0)} hurdle. A bank offers a fuel hedge.`,
+      title: 'Oil shock: Strait of Hormuz',
+      text: `The US–Iran conflict escalates under President Trump, and Iran threatens to close the Strait of Hormuz, the route for about a fifth of the world’s oil. Oil and jet fuel jump overnight. The scenario probabilities shift towards the worst case, and the route is now valued at its ${pct(rateHigh, 0)} hurdle. A bank offers a fuel hedge.`,
       data: [
         { key: 'probs', label: 'New probabilities worst / base / best', value: '40% / 40% / 20%' },
         {
