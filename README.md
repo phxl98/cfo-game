@@ -12,7 +12,7 @@ Without Supabase keys the app runs in **local mode**: all tabs of one browser sh
 ## Real setup for class (about 10 minutes)
 1. Create a free project at supabase.com.
 2. SQL Editor → paste `supabase/schema.sql` → change `'CHANGE-ME'` in the last line to your host PIN → Run.
-   Already installed before November 2026? Also run `supabase/migration-2-bonus.sql` once (captain's bonus).
+   Already installed before November 2026? Also run `supabase/migration-2-bonus.sql` and then `supabase/migration-3-ceo-penalty.sql` once each (CEO bonus and penalty).
 3. Project Settings → API: copy the Project URL and the anon/publishable key into `.env.local`
    (see `.env.example`). Restart `npm run dev`.
 4. Deploy: push to GitHub, import in Vercel, add the same two env variables there.
@@ -28,5 +28,5 @@ so changing a number updates the answer key. `npm test` checks the published ans
 
 ## Classroom flow (host buttons)
 Start round → Unlock round → (timer) → Trigger event → Reveal answers → Next round.
-"Jump" goes to any round. After each reveal the host screen shows one discussion question (backup questions fold out). The route status bar (R2–R5) updates after each reveal. In the leaderboard view the host can give a team "+10 captain's bonus" (−10 undoes it). The round 1 event is optional and only a what-if.
+"Jump" goes to any round. After each reveal the host screen shows one discussion question (backup questions fold out). The route status bar (R2–R5) updates after each reveal. Each team is a CFO; its score is its pay (1 point = €1k), earned by answering correctly. The presenters act as CEO: in the leaderboard view "+10k" pays a team a bonus for a good argument, "−10k" docks its pay. Round 4 is the only round with breaking news; "Next round" in round 4 drops the news before moving on.
 Leaderboard toggles the projector view; after the last round (5), "Final screen".

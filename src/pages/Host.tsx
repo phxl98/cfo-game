@@ -14,7 +14,7 @@ import { useGame } from '../hooks/useGame'
 import { useRootFontSize } from '../hooks/useRootFontSize'
 import { backend, type AnswerRow, type GameRow, type HostAction, type TeamRow } from '../lib/backend'
 import { LOCAL_PIN } from '../lib/backend/local'
-import { eurm, withUnit } from '../lib/format'
+import { pay, withUnit } from '../lib/format'
 import { leaderboard, maxPoints, pendingEventRound, scoreTask } from '../lib/scoring'
 import { hostGame, hostPin } from '../lib/storage'
 
@@ -296,8 +296,11 @@ function Controls({ game, busy, act }: { game: GameRow; busy: boolean; act: (a: 
 function Lobby({ teams, joinUrl, code }: { teams: TeamRow[]; joinUrl: string; code: string }) {
   return (
     <div className="py-10 text-center">
-      <p className="text-sm font-semibold uppercase tracking-[0.3em] text-gold">You are the CFO of Lufthansa</p>
+      <p className="text-sm font-semibold uppercase tracking-[0.3em] text-gold">Each team is a CFO of Lufthansa</p>
       <h1 className="mx-auto mt-4 max-w-4xl text-5xl font-bold leading-tight text-navy">{centralQuestion}</h1>
+      <p className="mx-auto mt-4 max-w-3xl text-xl text-slate-600">
+        Your bonus depends on getting the numbers right. The CEO is listening: a good argument earns extra, a bad one costs you.
+      </p>
       <p className="mt-10 text-2xl text-slate-600">
         Go to <b className="text-navy">{joinUrl.replace(/^https?:\/\//, '').replace(/\/\?code=.*/, '')}</b> and enter code
       </p>
@@ -523,9 +526,9 @@ function WinnerFlyIn({ names, value }: { names: string[]; value: number }) {
       <div className="fly-in flex items-center justify-center">
         <div className="float flex items-center">
           <div className="rounded-2xl border-4 border-navy bg-gold px-8 py-4 text-navy shadow-lg">
-            <p className="text-sm font-bold uppercase tracking-[0.3em]">{names.length > 1 ? 'Winners' : 'Winner'}</p>
+            <p className="text-sm font-bold uppercase tracking-[0.3em]">{names.length > 1 ? 'Best paid CFOs' : 'Best paid CFO'}</p>
             <p className="text-5xl font-bold leading-tight">{names.join(' & ')}</p>
-            <p className="text-xl font-semibold">{eurm(value, Number.isInteger(value) ? 0 : 2)} value created for Lufthansa</p>
+            <p className="text-xl font-semibold">{pay(value)} performance bonus</p>
           </div>
           <svg viewBox="0 0 60 10" className="h-4 w-24 shrink-0 text-navy" aria-hidden>
             <path d="M0 5 C20 0 40 10 60 5" fill="none" stroke="currentColor" strokeWidth="1.5" />

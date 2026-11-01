@@ -267,7 +267,7 @@ export const rounds: Round[] = [
         id: 'r2.decide',
         type: 'multivote',
         decision: true,
-        prompt: 'Which projects do you approve? The route goes to a detailed review in round 3.',
+        prompt: 'Which projects do you approve? The route goes to a detailed review in round 3. 5 pts per project called right.',
         options: [
           { id: 'freight', label: `${projects.freight.name} (IRR ${pct(projects.freight.irr)})`, points: 0, value: freightNpv },
           { id: 'hangar', label: `${projects.hangar.name} (IRR ${pct(projects.hangar.irr)})`, points: 0, value: hangarNpv },
@@ -452,11 +452,11 @@ export const rounds: Round[] = [
           prompt: 'How does the CFO react?',
           options: [
             { id: 'A', label: 'Go ahead as planned', points: 0, value: eNpvFuel },
-            { id: 'B', label: 'Cancel the route', points: 0, value: 0 },
-            { id: 'C', label: `Go ahead with the fuel hedge (${eurm(hedgeCost, 0)})`, points: 0, value: eNpvHedged },
+            { id: 'B', label: 'Cancel the route', points: 5, value: 0 },
+            { id: 'C', label: `Go ahead with the fuel hedge (${eurm(hedgeCost, 0)})`, points: 10, value: eNpvHedged },
             { id: 'D', label: 'Go ahead, but finance it with more debt to lower the WACC', points: 0, value: eNpvFuel },
           ],
-          explanation: `Without the hedge E(NPV) is ${eurm(eNpvFuel)}. With it: 0.4 × (${hedgedWorst} − ${hedgeCost}) + 0.4 × (${num(baseNpv, 1)} − ${hedgeCost}) + 0.2 × (50 − ${hedgeCost}) = ${v(eNpvHedged)}. More debt does not change the fuel risk, it only moves it to the shareholders.`,
+          explanation: `Best: the hedge (10 pts). Cancelling avoids the loss (5 pts). Without the hedge E(NPV) is ${eurm(eNpvFuel)}. With it: 0.4 × (${hedgedWorst} − ${hedgeCost}) + 0.4 × (${num(baseNpv, 1)} − ${hedgeCost}) + 0.2 × (50 − ${hedgeCost}) = ${v(eNpvHedged)}. More debt does not change the fuel risk, it only moves it to the shareholders.`,
         },
       ],
       explanation: 'The base case did not change, yet the decision did. Managing the risk can be worth more than accepting or rejecting.',

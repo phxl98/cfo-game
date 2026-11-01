@@ -60,7 +60,7 @@ export function TaskRow({
           <NumericInput formula={task.formula} unit={task.unit} draft={draft} setDraft={setDraft} busy={busy} onSubmit={submit} />
         )}
 
-        {open && isDecision(task) && <p className="mb-1 text-sm text-slate-500">Decision: creates or destroys value, no right or wrong.</p>}
+        {open && isDecision(task) && <p className="mb-1 text-sm text-slate-500">Decision: the CEO pays you for choosing what creates value for Lufthansa.</p>}
 
         {open && (task.type === 'choice' || task.type === 'discussion') && (
           <div>
@@ -257,7 +257,6 @@ function LockedIn({ task, value }: { task: Task; value: string }) {
 }
 
 function Result({ task, value, order }: { task: Task; value: string | undefined; order: number }) {
-  if (isDecision(task)) return <DecisionResult task={task} value={value} order={order} />
   if (task.type === 'checklist') return <ChecklistResult task={task} value={value} order={order} />
 
   const max = maxPoints(task)
@@ -272,6 +271,11 @@ function Result({ task, value, order }: { task: Task; value: string | undefined;
     const best = Math.max(...task.options.map((o) => o.points))
     correct = answerText(task, task.options.find((o) => o.points === best)!.id)
   }
+  if (task.type === 'multivote' && task.decision) {
+    const approve = task.options.filter((o) => (o.value ?? 0) > 0).map((o) => o.id)
+    correct = answerText(task, JSON.stringify(approve))
+  }
+  const npv = isDecision(task) && value !== undefined ? decisionValue(task, value) : null
 
   return (
     <div className="rise-in flex gap-2.5 text-sm" style={{ '--i': order } as React.CSSProperties}>
@@ -282,26 +286,14 @@ function Result({ task, value, order }: { task: Task; value: string | undefined;
           {max > 0 && <span className={`ml-2 font-semibold ${color}`}>{points} / {max} pts</span>}
         </p>
         {alt && <p className="mt-0.5 text-amber-700">{alt.note}</p>}
+        {npv !== null && (
+          <p className="mt-0.5 text-slate-700">
+            Effect on Lufthansa: NPV <b>{npv > 0 ? '+' : ''}{eurm(npv)}</b>
+          </p>
+        )}
         {correct && points < max && <p className="mt-0.5 text-slate-700">Best answer: <b>{correct}</b></p>}
         <p className="mt-0.5 text-slate-500">{task.explanation}</p>
       </div>
-    </div>
-  )
-}
-
-function DecisionResult({ task, value, order }: { task: Task; value: string | undefined; order: number }) {
-  const created = decisionValue(task, value)
-  const color = created > 0 ? 'text-emerald-600' : created < 0 ? 'text-red-600' : 'text-slate-500'
-  return (
-    <div className="rise-in text-sm" style={{ '--i': order } as React.CSSProperties}>
-      <p className="font-semibold text-navy">
-        {value === undefined ? 'No decision' : answerText(task, value)}
-        <span className={`ml-2 ${color}`}>
-          Value created: {created > 0 ? '+' : ''}
-          {eurm(created)}
-        </span>
-      </p>
-      <p className="mt-0.5 text-slate-500">{task.explanation}</p>
     </div>
   )
 }

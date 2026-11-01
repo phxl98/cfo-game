@@ -10,7 +10,7 @@ import type { Round, Task } from '../content/types'
 import { useGame } from '../hooks/useGame'
 import { TEAM_FONT_SIZE, useRootFontSize } from '../hooks/useRootFontSize'
 import { backend } from '../lib/backend'
-import { eurm } from '../lib/format'
+import { pay } from '../lib/format'
 import { leaderboard, pendingEventRound, teamScore } from '../lib/scoring'
 import { teamSession } from '../lib/storage'
 
@@ -80,7 +80,7 @@ export function Play() {
       <div className="grid grid-cols-[1.4fr_1fr_1fr] gap-4 px-6 pt-5">
         <Field label="Passenger" value={session.name} />
         <Field label="Flight" value={<span className="font-mono tracking-wider">{session.code}</span>} />
-        <Field label="Value" value={<span className="tabular-nums">{eurm(points, Number.isInteger(points) ? 0 : 2)}</span>} className="text-right" />
+        <Field label="Your pay" value={<span className="tabular-nums">{pay(points)}</span>} className="text-right" />
       </div>
 
       {!snap && <p className="px-6 py-10 text-center text-slate-400">Loading…</p>}

@@ -4,7 +4,7 @@ export interface Option {
   id: string
   label: string
   points: number
-  /** Decisions only: value created for Lufthansa in € m when a team picks this option. */
+  /** Decisions only: NPV in € m this option creates for Lufthansa; shown after the reveal, it does not score. */
   value?: number
 }
 
@@ -37,7 +37,7 @@ export interface NumericTask extends TaskBase {
 export interface ChoiceTask extends TaskBase {
   type: 'choice'
   options: Option[]
-  /** A project decision: no points, the chosen option's value counts instead. */
+  /** A project decision: scored by points like any choice, the options' NPVs are shown after the reveal. */
   decision?: boolean
 }
 
@@ -52,7 +52,7 @@ export interface DiscussionTask extends TaskBase {
   options: Option[]
 }
 
-/** Pick any number of options; the value is a JSON array of option ids. A decision adds up the picked values. */
+/** Pick any number of options; the value is a JSON array of option ids. A decision scores 5 per project called right (approve if its NPV > 0). */
 export interface MultiVoteTask extends TaskBase {
   type: 'multivote'
   options: Option[]

@@ -119,7 +119,7 @@ export function localBackend(): Backend {
       const db = read()
       const team = db.teams.find((t) => t.id === teamId && t.game_id === gameId)
       if (!team) throw new Error('Team not found')
-      team.bonus = Math.max(0, (team.bonus ?? 0) + delta)
+      team.bonus = (team.bonus ?? 0) + delta
       write(db)
     },
 

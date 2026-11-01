@@ -17,6 +17,9 @@ export const eur = (x: number, decimals = 2) =>
 
 export const eurm = (x: number, decimals = 2) => `${eur(x, decimals)} m`
 
+/** CFO pay: every point is worth €1,000. */
+export const pay = (points: number) => `${points < 0 ? MINUS : ''}€${num(Math.abs(points), 0)}k`
+
 export function withUnit(x: number, unit: Unit, decimals = 2): string {
   if (unit === '%') return pct(x, decimals)
   if (unit === '€ m') return eurm(x, decimals)

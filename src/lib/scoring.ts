@@ -37,19 +37,14 @@ function closeness(task: Task, n: number, target: number): number {
 
 export const isDecision = (task: Task) => (task.type === 'choice' || task.type === 'multivote') && !!task.decision
 
-/** Value a decision creates for Lufthansa in € m: the picked options' values. */
+/** NPV in € m that a team's decision would create for Lufthansa; information only, it does not score. */
 export function decisionValue(task: Task, value: string | undefined): number {
   if (value === undefined || !isDecision(task) || (task.type !== 'choice' && task.type !== 'multivote')) return 0
   const ids = task.type === 'multivote' ? parseMulti(value) : [value]
   return task.options.filter((o) => ids.includes(o.id)).reduce((sum, o) => sum + (o.value ?? 0), 0)
 }
 
-/** Best value a decision can create. */
-export function bestDecisionValue(task: Task): number {
-  if (!isDecision(task) || (task.type !== 'choice' && task.type !== 'multivote')) return 0
-  const values = task.options.map((o) => o.value ?? 0)
-  return task.type === 'multivote' ? values.filter((v) => v > 0).reduce((a, b) => a + b, 0) : Math.max(0, ...values)
-}
+const POINTS_PER_PROJECT = 5
 
 export function parseChecklist(value: string): Record<string, boolean> {
   try {
@@ -79,13 +74,17 @@ export function scoreTask(task: Task, value: string | undefined): number {
       return alt ? Math.round(closeness(task, n, alt.answer) * alt.points) : closeness(task, n, task.answer) * 10
     }
     case 'choice':
-      return task.decision ? 0 : (task.options.find((o) => o.id === value)?.points ?? 0)
+      return task.options.find((o) => o.id === value)?.points ?? 0
     case 'checklist': {
       const picked = parseChecklist(value)
       return task.items.filter((i) => picked[i.id] === i.include).length * 2
     }
+    case 'multivote': {
+      if (!task.decision) return 0
+      const picked = parseMulti(value)
+      return task.options.filter((o) => picked.includes(o.id) === (o.value ?? 0) > 0).length * POINTS_PER_PROJECT
+    }
     case 'discussion':
-    case 'multivote':
       return 0
   }
 }
@@ -95,11 +94,12 @@ export function maxPoints(task: Task): number {
     case 'numeric':
       return 10
     case 'choice':
-      return task.decision ? 0 : Math.max(...task.options.map((o) => o.points))
+      return Math.max(...task.options.map((o) => o.points))
     case 'checklist':
       return task.items.length * 2
-    case 'discussion':
     case 'multivote':
+      return task.decision ? task.options.length * POINTS_PER_PROJECT : 0
+    case 'discussion':
       return 0
   }
 }
@@ -121,7 +121,7 @@ const eventTaskIds = new Set(rounds.flatMap((r) => r.event?.tasks.map((t) => t.i
 export const pendingEventRound = (game: Pick<GameRow, 'round_state' | 'current_round'>) =>
   game.round_state === 'event' ? game.current_round : undefined
 
-/** Points and decision values only count once the round has been revealed; the captain's bonus always counts. */
+/** CFO pay in points (1 point = €1k): answers count once their round is revealed; the CEO's bonus or penalty always counts. */
 export function teamScore(team: TeamRow, answers: AnswerRow[], revealedRounds: number[], pendingEvent?: number): number {
   const teamId = team.id
   return (team.bonus ?? 0) + answers
@@ -129,7 +129,7 @@ export function teamScore(team: TeamRow, answers: AnswerRow[], revealedRounds: n
     .filter((a) => !(a.round === pendingEvent && eventTaskIds.has(a.task_id)))
     .reduce((sum, a) => {
       const task = taskById(a.task_id)
-      return sum + (task ? scoreTask(task, a.value) + decisionValue(task, a.value) : 0)
+      return sum + (task ? scoreTask(task, a.value) : 0)
     }, 0)
 }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { rounds, routeStatus, taskNumbers } from '../content/rounds'
 import type { Task } from '../content/types'
-import { bestDecisionValue, decisionValue, maxPoints, scoreTask, taskById } from './scoring'
+import { decisionValue, maxPoints, scoreTask, taskById } from './scoring'
 
 // The answer key from the build spec, rounded as published.
 const expected: Record<string, number> = {
@@ -42,9 +42,8 @@ describe('answer key', () => {
 describe('structure', () => {
   const all = rounds.flatMap((r) => [...r.tasks, ...(r.event?.tasks ?? [])])
 
-  it('perfect game: €210 m in points plus €7.83 m from decisions', () => {
-    expect(all.reduce((sum, t) => sum + maxPoints(t), 0)).toBe(210)
-    expect(all.reduce((sum, t) => sum + bestDecisionValue(t), 0)).toBeCloseTo(7.83, 1)
+  it('a perfect CFO earns €230k', () => {
+    expect(all.reduce((sum, t) => sum + maxPoints(t), 0)).toBe(230)
   })
 
   it('every numeric task shows its formula', () => {
@@ -77,8 +76,15 @@ describe('structure', () => {
   })
 })
 
-describe('decisions create value', () => {
-  it('freighters destroy, the hangar creates value', () => {
+describe('decisions', () => {
+  it('pay 5 per project called right', () => {
+    const t = taskById('r2.decide')!
+    expect(scoreTask(t, JSON.stringify(['hangar']))).toBe(10)
+    expect(scoreTask(t, JSON.stringify([]))).toBe(5)
+    expect(scoreTask(t, JSON.stringify(['freight']))).toBe(0)
+  })
+
+  it('freighters destroy, the hangar creates value (shown, not scored)', () => {
     const t = taskById('r2.decide')!
     expect(decisionValue(t, JSON.stringify(['freight']))).toBeCloseTo(-7.88, 2)
     expect(decisionValue(t, JSON.stringify(['hangar']))).toBeCloseTo(5.15, 2)
@@ -90,7 +96,7 @@ describe('decisions create value', () => {
     expect(decisionValue(t, 'A')).toBeCloseTo(-1.32, 2)
     expect(decisionValue(t, 'B')).toBe(0)
     expect(decisionValue(t, 'C')).toBeCloseTo(2.68, 2)
-    expect(scoreTask(t, 'C')).toBe(0)
+    expect([scoreTask(t, 'C'), scoreTask(t, 'B'), scoreTask(t, 'A')]).toEqual([10, 5, 0])
   })
 })
 

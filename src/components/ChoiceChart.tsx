@@ -26,19 +26,20 @@ export function ChoiceChart({
       {task.options.map((o) => {
         const these = picks.filter((p) => picked(p, o.id))
         const decision = task.type !== 'discussion' && task.decision
-        const highlight = revealed && task.type === 'choice' && !decision && o.points === best
+        const highlight =
+          revealed && (task.type === 'choice' ? o.points === best : decision && (o.value ?? 0) > 0)
         return (
           <div key={o.id}>
             <div className="flex items-baseline justify-between gap-3 text-sm">
               <span className={highlight ? 'font-semibold text-emerald-700' : 'text-slate-700'}>
                 <b>{o.id.length === 1 ? `${o.id}: ` : ''}</b>
                 {o.label}
-                {revealed && task.type === 'choice' && !decision && (
+                {revealed && task.type === 'choice' && (
                   <span className="ml-2 text-slate-400">({o.points} pts)</span>
                 )}
                 {revealed && decision && (
-                  <span className={`ml-2 font-semibold ${(o.value ?? 0) > 0 ? 'text-emerald-700' : (o.value ?? 0) < 0 ? 'text-red-700' : 'text-slate-500'}`}>
-                    {(o.value ?? 0) > 0 ? '+' : ''}
+                  <span className={`ml-2 text-sm font-normal ${(o.value ?? 0) > 0 ? 'text-emerald-700' : (o.value ?? 0) < 0 ? 'text-red-700' : 'text-slate-500'}`}>
+                    NPV {(o.value ?? 0) > 0 ? '+' : ''}
                     {eurm(o.value ?? 0)}
                   </span>
                 )}

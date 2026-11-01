@@ -137,7 +137,7 @@ language plpgsql security definer set search_path = public as $$
 begin
   if not check_pin(p_pin) then raise exception 'Wrong PIN'; end if;
   if p_delta not in (10, -10) then raise exception 'Bonus must be +10 or -10'; end if;
-  update teams set bonus = greatest(0, bonus + p_delta) where id = p_team and game_id = p_game;
+  update teams set bonus = bonus + p_delta where id = p_team and game_id = p_game;
 end $$;
 
 grant execute on function host_bonus(uuid, text, uuid, int) to anon, authenticated;

@@ -16,7 +16,7 @@ export interface TeamRow {
   id: string
   game_id: string
   name: string
-  /** Captain's bonus from the host; missing until the bonus migration has run. */
+  /** CEO bonus (+) or penalty (−) from the host, in points; missing until the bonus migration has run. */
   bonus?: number
   created_at: string
 }
@@ -54,7 +54,7 @@ export interface Backend {
   createGame(pin: string): Promise<GameRow>
   findGame(code: string): Promise<GameRow | null>
   hostAction(gameId: string, pin: string, action: HostAction, arg?: number): Promise<void>
-  /** Captain's bonus: delta is +10 or −10, the total never drops below 0. */
+  /** CEO bonus or penalty: delta is +10 or −10; the total may go negative. */
   bonus(gameId: string, pin: string, teamId: string, delta: 10 | -10): Promise<void>
   joinTeam(code: string, name: string): Promise<TeamRow>
   /** Resolves silently if this task was already submitted (answers are locked). */

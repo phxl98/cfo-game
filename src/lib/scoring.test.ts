@@ -49,8 +49,8 @@ describe('scoreTask', () => {
     expect(scoreTask(taskById('r3.check')!, JSON.stringify({ study: true, hangar: true }))).toBe(2)
   })
 
-  it('decisions never score points', () => {
-    expect(scoreTask(taskById('r2.decide')!, JSON.stringify(['freight', 'hangar']))).toBe(0)
+  it('a decision scores the projects called right', () => {
+    expect(scoreTask(taskById('r2.decide')!, JSON.stringify(['freight', 'hangar']))).toBe(5)
   })
 })
 
@@ -63,16 +63,16 @@ describe('leaderboard', () => {
     expect(board.map((e) => [e.team.id, e.points])).toEqual([['B', 20], ['A', 10]])
   })
 
-  it('decision values count once revealed', () => {
+  it('decisions pay once revealed, the CEO penalty can go negative', () => {
     const decide = { ...answer, id: 'b', round: 2, task_id: 'r2.decide', value: JSON.stringify(['hangar']) }
-    const [a] = leaderboard([team('A')], [answer, decide], [1, 2])
-    expect(a.points).toBeCloseTo(15.15, 2)
+    expect(leaderboard([team('A')], [answer, decide], [1, 2])[0].points).toBe(20)
+    expect(leaderboard([team('A', -20)], [], [])[0].points).toBe(-20)
   })
 
   it('breaking news answers count only after their own reveal', () => {
     const react = { ...answer, id: 'c', round: 4, task_id: 'r4.e.react', value: 'C' }
     expect(leaderboard([team('A')], [react], [4], 4)[0].points).toBe(0)
-    expect(leaderboard([team('A')], [react], [4])[0].points).toBeCloseTo(2.68, 2)
+    expect(leaderboard([team('A')], [react], [4])[0].points).toBe(10)
   })
 
   it('bonus counts before any reveal, a missing bonus column counts as 0', () => {
